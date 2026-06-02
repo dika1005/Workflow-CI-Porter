@@ -12,7 +12,7 @@ def main():
     mlflow.autolog()
 
     # 2. Membaca dataset
-    data_path = "porter-delivery-time-estimation_preprcessing/porter_delivery_preprocessed.csv"
+    data_path = "porter-delivery-time-estimation_preprocessing/porter_delivery_preprocessed.csv"
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"Dataset tidak ditemukan di jalur: {data_path}")
         
