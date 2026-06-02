@@ -11,7 +11,7 @@ def main():
     # 1. Mengatur nama eksperimen lokal di runner
     mlflow.set_experiment("Porter_Delivery_Base_Model")
 
-    # 2. Membaca dataset
+    # 2. Membaca dataset menggunakan nama folder baru Anda
     data_path = "porter-delivery-time-estimation_preprcessing/porter_delivery_preprocessed.csv"
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"Dataset tidak ditemukan di jalur: {data_path}")
@@ -24,13 +24,12 @@ def main():
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # 3. Aktifkan MLflow Autolog sebelum inisialisasi model
+    # 3. Aktifkan MLflow Autolog
     mlflow.autolog()
     
-    # 4. Melatih Base Model menggunakan Random Forest Regressor
+    # 4. Melatih Base Model
     print("Memulai pelatihan base model dengan MLflow Autolog di GitHub Actions...")
     
-    # Menggunakan active_run() agar tidak bentrok dengan run yang dibuat oleh 'mlflow run'
     active_run = mlflow.active_run()
     if active_run:
         print(f"Menggunakan run aktif dari MLflow Project: {active_run.info.run_id}")
@@ -50,7 +49,6 @@ def main():
     print(f"R2:   {r2:.4f}")
     print("----------------------------")
     
-    # Memastikan artefak model tersimpan dengan nama 'model' agar bisa dibuild oleh Docker
     mlflow.sklearn.log_model(model, artifact_path="model")
     print("Pelatihan selesai. Semua metrik dan artefak model berhasil dicatat.")
 
