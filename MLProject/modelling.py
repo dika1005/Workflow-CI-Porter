@@ -25,20 +25,23 @@ def main():
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # Matikan autolog total agar tidak mengintervensi backend
+    # Matikan autolog global agar tidak mengintervensi backend
     mlflow.autolog(disable=True)
     
     print("Memulai pelatihan base model di GitHub Actions...")
     
-    # Ambil ID run aktif yang sudah disediakan oleh perintah 'mlflow run'
-    active_run = mlflow.active_run()
-    if not active_run:
-        raise RuntimeError("Tidak ada run aktif dari MLflow Project.")
+    # Mengambil Run ID langsung dari Environment Variable yang disediakan oleh 'mlflow run'
+    run_id = os.environ.get("MLFLOW_RUN_ID")
     
-    run_id = active_run.info.run_id
-    print(f"Menggunakan low-level MlflowClient untuk Run ID: {run_id}")
+    # Jika dijalankan manual tanpa 'mlflow run' (fallback/cadangan), buat run baru
+    if not run_id:
+        print("Menjalankan skrip secara mandiri, membuat Run ID baru...")
+        active_run = mlflow.start_run()
+        run_id = active_run.info.run_id
+    else:
+        print(f"Menggunakan Run ID dari Environment System: {run_id}")
     
-    # Inisialisasi MlflowClient
+    # Inisialisasi MlflowClient tingkat rendah
     client = MlflowClient()
         
     # Proses Training
@@ -66,7 +69,6 @@ def main():
     
     # 4. Simpan biner model langsung ke dalam direktori artefak lokal milik run_id tersebut
     print("Menyimpan artefak model secara eksplisit...")
-    # Menghitung jalur lokal absolut tempat mlflow run menyimpan artefaknya
     local_artifact_dir = f"mlruns/0/{run_id}/artifacts/model"
     mlflow.sklearn.save_model(sk_model=model, path=local_artifact_dir)
     print(f"Pelatihan selesai. Artefak berhasil dikunci secara fisik di: {local_artifact_dir}")
