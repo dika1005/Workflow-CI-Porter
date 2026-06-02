@@ -5,13 +5,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import mlflow
-import mlflow.sklearn
 
 def main():
     # 1. Mengatur nama eksperimen lokal di runner
     mlflow.set_experiment("Porter_Delivery_Base_Model")
 
-    # 2. Membaca dataset menggunakan nama folder baru Anda
+    # 2. Membaca dataset
     data_path = "porter-delivery-time-estimation_preprcessing/porter_delivery_preprocessed.csv"
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"Dataset tidak ditemukan di jalur: {data_path}")
@@ -24,10 +23,10 @@ def main():
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # 3. Aktifkan MLflow Autolog
+    # 3. Aktifkan MLflow Autolog (Ini otomatis menyimpan model ke folder 'model')
     mlflow.autolog()
     
-    # 4. Melatih Base Model
+    # 4. Melatih Base Model menggunakan Random Forest Regressor
     print("Memulai pelatihan base model dengan MLflow Autolog di GitHub Actions...")
     
     active_run = mlflow.active_run()
@@ -37,7 +36,7 @@ def main():
     model = RandomForestRegressor(n_estimators=50, max_depth=10, random_state=42, n_jobs=-1)
     model.fit(X_train, y_train)
     
-    # Prediksi dan evaluasi sederhana
+    # Prediksi dan evaluasi
     y_pred = model.predict(X_test)
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
     mae = mean_absolute_error(y_test, y_pred)
@@ -48,9 +47,7 @@ def main():
     print(f"MAE:  {mae:.4f}")
     print(f"R2:   {r2:.4f}")
     print("----------------------------")
-    
-    mlflow.sklearn.log_model(model, artifact_path="model")
-    print("Pelatihan selesai. Semua metrik dan artefak model berhasil dicatat.")
+    print("Pelatihan selesai. Artefak model diamankan otomatis oleh Autolog.")
 
 if __name__ == "__main__":
     main()
