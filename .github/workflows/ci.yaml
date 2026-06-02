@@ -38,9 +38,9 @@ jobs:
         LATEST_RUN=$(python -c "import mlflow; print(mlflow.search_runs()['run_id'][0])")
         echo "Menggunakan Run ID terbaru: $LATEST_RUN"
         
-        # Build docker image dengan memaksa conda sebagai env manager internal agar tidak crash di get-pip
-        mlflow models build-docker -m "runs:/$LATEST_RUN/model" -n "${{ secrets.DOCKER_HUB_USERNAME }}/porter-delivery-model:latest" --env-manager conda
-
+        # Menggunakan virtualenv sebagai env-manager kontainer agar tidak terhambat lisensi ToS Anaconda
+        mlflow models build-docker -m "runs:/$LATEST_RUN/model" -n "${{ secrets.DOCKER_HUB_USERNAME }}/porter-delivery-model:latest" --env-manager virtualenv
+        
     - name: Push Image to Docker Hub
       run: |
         docker push ${{ secrets.DOCKER_HUB_USERNAME }}/porter-delivery-model:latest
