@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import mlflow
+import mlflow.sklearn
 
 def main():
     # 1. Mengatur nama eksperimen lokal di runner
@@ -23,12 +24,13 @@ def main():
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # 3. Aktifkan MLflow Autolog (Ini otomatis menyimpan model ke folder 'model')
-    mlflow.autolog()
+    # 3. Nonaktifkan autolog global agar tidak terjadi konflik tumpang-tindih pencatatan
+    mlflow.autolog(disable=True)
     
     # 4. Melatih Base Model menggunakan Random Forest Regressor
-    print("Memulai pelatihan base model dengan MLflow Autolog di GitHub Actions...")
+    print("Memulai pelatihan base model di GitHub Actions...")
     
+    # Cek run aktif dari wrapper mlflow run
     active_run = mlflow.active_run()
     if active_run:
         print(f"Menggunakan run aktif dari MLflow Project: {active_run.info.run_id}")
@@ -36,18 +38,29 @@ def main():
     model = RandomForestRegressor(n_estimators=50, max_depth=10, random_state=42, n_jobs=-1)
     model.fit(X_train, y_train)
     
-    # Prediksi dan evaluasi
+    # Prediksi dan evaluasi manual untuk mencatat metrik
     y_pred = model.predict(X_test)
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
     mae = mean_absolute_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
+    
+    # Catat parameter dan metrik secara eksplisit ke run aktif
+    mlflow.log_param("n_estimators", 50)
+    mlflow.log_param("max_depth", 10)
+    mlflow.log_metric("rmse", rmse)
+    mlflow.log_metric("mae", mae)
+    mlflow.log_metric("r2", r2)
     
     print("\n--- Evaluasi Base Model ---")
     print(f"RMSE: {rmse:.4f}")
     print(f"MAE:  {mae:.4f}")
     print(f"R2:   {r2:.4f}")
     print("----------------------------")
-    print("Pelatihan selesai. Artefak model diamankan otomatis oleh Autolog.")
+    
+    # 5. WAJIB: Simpan artefak model secara manual dengan nama 'model' agar bisa dibaca Docker
+    print("Menyimpan artefak model ke folder 'model'...")
+    mlflow.sklearn.log_model(sk_model=model, artifact_path="model")
+    print("Pelatihan selesai. Semua metrik dan artefak model resmi dicatat.")
 
 if __name__ == "__main__":
     main()
