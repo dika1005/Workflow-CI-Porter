@@ -11,7 +11,7 @@ def main():
     # 1. Mengatur nama eksperimen lokal di runner
     mlflow.set_experiment("Porter_Delivery_Base_Model")
 
-    # 2. Membaca dataset (Maju satu langkah dari posisi modelling.py ke dalam folder dataset)
+    # 2. Membaca dataset
     data_path = "porter-delivery-time-estimation_preprcessing/porter_delivery_preprocessed.csv"
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"Dataset tidak ditemukan di jalur: {data_path}")
@@ -29,25 +29,30 @@ def main():
     
     # 4. Melatih Base Model menggunakan Random Forest Regressor
     print("Memulai pelatihan base model dengan MLflow Autolog di GitHub Actions...")
-    with mlflow.start_run(run_name="RandomForest_Base"):
-        model = RandomForestRegressor(n_estimators=50, max_depth=10, random_state=42, n_jobs=-1)
-        model.fit(X_train, y_train)
+    
+    # Menggunakan active_run() agar tidak bentrok dengan run yang dibuat oleh 'mlflow run'
+    active_run = mlflow.active_run()
+    if active_run:
+        print(f"Menggunakan run aktif dari MLflow Project: {active_run.info.run_id}")
         
-        # Prediksi dan evaluasi sederhana
-        y_pred = model.predict(X_test)
-        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-        mae = mean_absolute_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
-        
-        print("\n--- Evaluasi Base Model ---")
-        print(f"RMSE: {rmse:.4f}")
-        print(f"MAE:  {mae:.4f}")
-        print(f"R2:   {r2:.4f}")
-        print("----------------------------")
-        
-        # Memastikan artefak model tersimpan dengan nama 'model' agar bisa dibuild oleh Docker
-        mlflow.sklearn.log_model(model, artifact_path="model")
-        print("Pelatihan selesai. Semua metrik dan artefak model berhasil dicatat.")
+    model = RandomForestRegressor(n_estimators=50, max_depth=10, random_state=42, n_jobs=-1)
+    model.fit(X_train, y_train)
+    
+    # Prediksi dan evaluasi sederhana
+    y_pred = model.predict(X_test)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    mae = mean_absolute_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    
+    print("\n--- Evaluasi Base Model ---")
+    print(f"RMSE: {rmse:.4f}")
+    print(f"MAE:  {mae:.4f}")
+    print(f"R2:   {r2:.4f}")
+    print("----------------------------")
+    
+    # Memastikan artefak model tersimpan dengan nama 'model' agar bisa dibuild oleh Docker
+    mlflow.sklearn.log_model(model, artifact_path="model")
+    print("Pelatihan selesai. Semua metrik dan artefak model berhasil dicatat.")
 
 if __name__ == "__main__":
     main()
