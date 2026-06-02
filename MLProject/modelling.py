@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import mlflow
 import mlflow.sklearn
+from mlflow.tracking import MlflowClient
 
 def main():
     # 1. Mengatur nama eksperimen lokal di runner
@@ -24,32 +25,38 @@ def main():
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     
-    # 3. Nonaktifkan autolog global agar tidak terjadi konflik tumpang-tindih pencatatan
+    # Matikan autolog total agar tidak mengintervensi backend
     mlflow.autolog(disable=True)
     
-    # 4. Melatih Base Model menggunakan Random Forest Regressor
     print("Memulai pelatihan base model di GitHub Actions...")
     
-    # Cek run aktif dari wrapper mlflow run
+    # Ambil ID run aktif yang sudah disediakan oleh perintah 'mlflow run'
     active_run = mlflow.active_run()
-    if active_run:
-        print(f"Menggunakan run aktif dari MLflow Project: {active_run.info.run_id}")
+    if not active_run:
+        raise RuntimeError("Tidak ada run aktif dari MLflow Project.")
+    
+    run_id = active_run.info.run_id
+    print(f"Menggunakan low-level MlflowClient untuk Run ID: {run_id}")
+    
+    # Inisialisasi MlflowClient
+    client = MlflowClient()
         
+    # Proses Training
     model = RandomForestRegressor(n_estimators=50, max_depth=10, random_state=42, n_jobs=-1)
     model.fit(X_train, y_train)
     
-    # Prediksi dan evaluasi manual untuk mencatat metrik
+    # Prediksi dan evaluasi metrik
     y_pred = model.predict(X_test)
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
     mae = mean_absolute_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
     
-    # Catat parameter dan metrik secara eksplisit ke run aktif
-    mlflow.log_param("n_estimators", 50)
-    mlflow.log_param("max_depth", 10)
-    mlflow.log_metric("rmse", rmse)
-    mlflow.log_metric("mae", mae)
-    mlflow.log_metric("r2", r2)
+    # 3. Catat parameter dan metrik secara aman menggunakan MlflowClient
+    client.log_param(run_id, "n_estimators", 50)
+    client.log_param(run_id, "max_depth", 10)
+    client.log_metric(run_id, "rmse", rmse)
+    client.log_metric(run_id, "mae", mae)
+    client.log_metric(run_id, "r2", r2)
     
     print("\n--- Evaluasi Base Model ---")
     print(f"RMSE: {rmse:.4f}")
@@ -57,10 +64,12 @@ def main():
     print(f"R2:   {r2:.4f}")
     print("----------------------------")
     
-    # 5. WAJIB: Simpan artefak model secara manual dengan nama 'model' agar bisa dibaca Docker
-    print("Menyimpan artefak model ke folder 'model'...")
-    mlflow.sklearn.log_model(sk_model=model, artifact_path="model")
-    print("Pelatihan selesai. Semua metrik dan artefak model resmi dicatat.")
+    # 4. Simpan biner model langsung ke dalam direktori artefak lokal milik run_id tersebut
+    print("Menyimpan artefak model secara eksplisit...")
+    # Menghitung jalur lokal absolut tempat mlflow run menyimpan artefaknya
+    local_artifact_dir = f"mlruns/0/{run_id}/artifacts/model"
+    mlflow.sklearn.save_model(sk_model=model, path=local_artifact_dir)
+    print(f"Pelatihan selesai. Artefak berhasil dikunci secara fisik di: {local_artifact_dir}")
 
 if __name__ == "__main__":
     main()
