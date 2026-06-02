@@ -38,8 +38,8 @@ jobs:
         LATEST_RUN=$(python -c "import mlflow; print(mlflow.search_runs()['run_id'][0])")
         echo "Menggunakan Run ID terbaru: $LATEST_RUN"
         
-        # Build docker image tanpa menggunakan parameter '--disable-java'
-        mlflow models build-docker -m "runs:/$LATEST_RUN/model" -n "${{ secrets.DOCKER_HUB_USERNAME }}/porter-delivery-model:latest"
+        # Build docker image dengan memaksa conda sebagai env manager internal agar tidak crash di get-pip
+        mlflow models build-docker -m "runs:/$LATEST_RUN/model" -n "${{ secrets.DOCKER_HUB_USERNAME }}/porter-delivery-model:latest" --env-manager conda
 
     - name: Push Image to Docker Hub
       run: |
