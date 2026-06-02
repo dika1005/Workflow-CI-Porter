@@ -34,12 +34,12 @@ jobs:
 
     - name: Build Docker Image via MLflow
       run: |
-        # Mengambil RUN_ID dari eksperimen lokal terakhir secara otomatis
-        LATEST_RUN=$(python -c "import mlflow; print(mlflow.search_runs(experiment_names=['Porter_Delivery_Base_Model'])['run_id'][0])")
-        echo "Menggunakan Run ID terakhir: $LATEST_RUN"
+        # Mengambil RUN_ID dari eksperimen lokal terakhir yang baru saja sukses dieksekusi
+        LATEST_RUN=$(python -c "import mlflow; print(mlflow.search_runs()['run_id'][0])")
+        echo "Menggunakan Run ID terbaru: $LATEST_RUN"
         
-        # Build docker image dengan RUN_ID yang valid
-        mlflow models build-docker -m "runs:/$LATEST_RUN/model" -n "${{ secrets.DOCKER_HUB_USERNAME }}/porter-delivery-model:latest" --disable-java
+        # Build docker image tanpa menggunakan parameter '--disable-java'
+        mlflow models build-docker -m "runs:/$LATEST_RUN/model" -n "${{ secrets.DOCKER_HUB_USERNAME }}/porter-delivery-model:latest"
 
     - name: Push Image to Docker Hub
       run: |
